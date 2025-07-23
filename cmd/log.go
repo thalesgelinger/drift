@@ -25,13 +25,19 @@ var titleStyle = func() lipgloss.Style {
 
 var logCmd = &cobra.Command{
 	Use:   "log",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "View and filter Android and iOS logs",
+	Long: `The 'log' command allows you to stream, view, and filter logs from Android and iOS devices or simulators/emulators.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+You can use this tool to debug applications by capturing device logs in real-time, applying filters based on keywords, log levels, platforms, or other criteria.
+
+Examples:
+  log                             # View all logs
+  log --platform android          # Show only Android logs
+  log --filter "Error"            # Filter logs containing the word 'Error'
+  log --platform ios --level debug # Show iOS logs at debug level
+
+Supports both physical and virtual devices.
+Useful for mobile developers and testers needing better insight into runtime behavior.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		platform, err := cmd.Flags().GetString("platform")
