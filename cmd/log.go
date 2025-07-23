@@ -86,6 +86,15 @@ func (m model) Init() tea.Cmd {
 	)
 }
 
+func highlightText(text, substr string) string {
+	if substr == "" {
+		return text
+	}
+	highlightStart := "\033[1;33m" // Bold yellow
+	highlightEnd := "\033[0m"
+	return strings.Replace(text, substr, highlightStart+substr+highlightEnd, -1)
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
@@ -101,15 +110,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.textInput.Width = msg.Width - 4
 
 	case logMsg:
-		filteredLogs := []string{}
-		for _, log := range append(m.logs, string(msg)) {
-			if m.filterText == "" || strings.Contains(strings.ToLower(log), strings.ToLower(m.filterText)) {
-				filteredLogs = append(filteredLogs, log)
-			}
-		}
 		m.logs = append(m.logs, string(msg))
-		m.viewport.SetContent(strings.Join(filteredLogs, "\n"))
-		m.viewport.GotoBottom()
+		m.updateViewport()
 		return m, waitForLogs(m.logChan)
 
 	case error:
@@ -125,15 +127,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	m.filterText = m.textInput.Value()
+	m.updateViewport()
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m *model) updateViewport() {
 	filteredLogs := []string{}
 	for _, log := range m.logs {
 		if m.filterText == "" || strings.Contains(strings.ToLower(log), strings.ToLower(m.filterText)) {
-			filteredLogs = append(filteredLogs, log)
+			highlightedLog := highlightText(log, m.filterText)
+			filteredLogs = append(filteredLogs, highlightedLog)
 		}
 	}
 	m.viewport.SetContent(strings.Join(filteredLogs, "\n"))
-
-	return m, tea.Batch(cmds...)
+	m.viewport.GotoBottom()
 }
 
 func (m model) View() string {
