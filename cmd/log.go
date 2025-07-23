@@ -68,12 +68,19 @@ type model struct {
 	filterText       string
 	logChan          chan string
 	err              error
+	focused          string
+	paused           bool
+}
+
+func (m model) helpView() string {
+	return "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(
+		"j/k: scroll • /: focus filter • esc: blur filter • r: resume • q: quit",
+	)
 }
 
 func initialModel(platform string) model {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter logs..."
-	ti.Focus()
 
 	return model{
 		selectedPlatform: platform,
@@ -81,6 +88,7 @@ func initialModel(platform string) model {
 		textInput:        ti,
 		logs:             []string{},
 		logChan:          make(chan string),
+		focused:          "viewport", // New field to track focus
 	}
 }
 
@@ -113,17 +121,58 @@ func highlightText(text, substr string) string {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "/":
+			if m.focused == "viewport" {
+				m.focused = "filter"
+				m.textInput.Focus()
+			}
+		case "esc":
+			if m.focused == "filter" {
+				m.focused = "viewport"
+				m.textInput.Blur()
+			}
+		case "r":
+			m.paused = false
+			m.viewport.GotoBottom()
+		}
+
+		if m.focused == "viewport" {
+			switch msg.String() {
+			case "up", "k":
+				m.paused = true
+				m.viewport.LineUp(1)
+			case "down", "j":
+				m.viewport.LineDown(1)
+				if m.viewport.AtBottom() {
+					m.paused = false
+				}
+			case "pgup", "ctrl+b":
+				m.paused = true
+				m.viewport.HalfViewUp()
+			case "pgdown", "ctrl+f":
+				m.viewport.HalfViewDown()
+				if m.viewport.AtBottom() {
+					m.paused = false
+				}
+			case "home", "g":
+				m.paused = true
+				m.viewport.GotoTop()
+			case "end", "G":
+				m.paused = false
+				m.viewport.GotoBottom()
+			}
 		}
 
 	case tea.WindowSizeMsg:
 		m.viewport.Width = msg.Width
-		m.viewport.Height = msg.Height - 3
+		m.viewport.Height = msg.Height - 5 // Adjusted for help view
 		m.textInput.Width = msg.Width - 4
 
 	case logMsg:
@@ -136,17 +185,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	var (
-		cmd  tea.Cmd
-		cmds []tea.Cmd
-	)
-	m.textInput, cmd = m.textInput.Update(msg)
-	cmds = append(cmds, cmd)
+	if m.focused == "filter" {
+		m.textInput, cmd = m.textInput.Update(msg)
+		m.filterText = m.textInput.Value()
+		m.updateViewport()
+	}
 
-	m.filterText = m.textInput.Value()
-	m.updateViewport()
-
-	return m, tea.Batch(cmds...)
+	return m, cmd
 }
 
 func (m *model) updateViewport() {
@@ -158,15 +203,18 @@ func (m *model) updateViewport() {
 		}
 	}
 	m.viewport.SetContent(strings.Join(filteredLogs, "\n"))
-	m.viewport.GotoBottom()
+	if !m.paused {
+		m.viewport.GotoBottom()
+	}
 }
 
 func (m model) View() string {
 	return fmt.Sprintf(
-		"%s\n%s\n%s",
+		"%s\n%s\n%s%s",
 		m.header(),
 		m.viewport.View(),
 		m.textInput.View(),
+		m.helpView(),
 	)
 }
 
