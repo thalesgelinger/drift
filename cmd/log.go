@@ -74,7 +74,7 @@ type model struct {
 
 func (m model) helpView() string {
 	return "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(
-		"j/k: scroll • /: focus filter • esc: blur filter • r: resume • q: quit",
+		"j/k: scroll • /: focus filter • esc: blur filter • r: resume • c: clear • q: quit",
 	)
 }
 
@@ -159,17 +159,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "up", "k":
 				m.paused = true
-				m.viewport.LineUp(1)
+				m.viewport.ScrollUp(1)
 			case "down", "j":
-				m.viewport.LineDown(1)
+				m.viewport.ScrollDown(1)
 				if m.viewport.AtBottom() {
 					m.paused = false
 				}
 			case "pgup", "ctrl+b":
 				m.paused = true
-				m.viewport.HalfViewUp()
+				m.viewport.HalfPageUp()
 			case "pgdown", "ctrl+f":
-				m.viewport.HalfViewDown()
+				m.viewport.HalfPageDown()
 				if m.viewport.AtBottom() {
 					m.paused = false
 				}
@@ -179,6 +179,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "end", "G":
 				m.paused = false
 				m.viewport.GotoBottom()
+			case "c":
+				m.viewport.SetContent("")
+				m.logs = []string{}
 			}
 		}
 
