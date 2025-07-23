@@ -43,7 +43,12 @@ to quickly create a Cobra application.`,
 
 		switch platform {
 		case "android":
-			watchAndroidLogs()
+			now := time.Now().Format("01-02 15:04:05.000")
+			logCmd := exec.Command("adb", "logcat", "-T", now)
+			watchLogs("Android", logCmd)
+		case "ios":
+			logCmd := exec.Command("xcrun", "simctl", "spawn", "booted", "log", "stream", "--style", "syslog")
+			watchLogs("IOS", logCmd)
 		}
 
 	},
@@ -167,9 +172,7 @@ func waitForLogs(logChan chan string) tea.Cmd {
 	}
 }
 
-func watchAndroidLogs() {
-	now := time.Now().Format("01-02 15:04:05.000")
-	execCmd := exec.Command("adb", "logcat", "-T", now)
+func watchLogs(platform string, execCmd *exec.Cmd) {
 	stdout, err := execCmd.StdoutPipe()
 	if err != nil {
 		fmt.Println("Error creating StdoutPipe", err)
@@ -181,7 +184,7 @@ func watchAndroidLogs() {
 		return
 	}
 
-	m := initialModel("android")
+	m := initialModel(platform)
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)
