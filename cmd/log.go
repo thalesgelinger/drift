@@ -120,6 +120,18 @@ func highlightText(text, substr string) string {
 	)
 }
 
+func wrapLine(line string, width int) []string {
+	var wrapped []string
+	for len(line) > width {
+		wrapped = append(wrapped, line[:width])
+		line = line[width:]
+	}
+	if len(line) > 0 {
+		wrapped = append(wrapped, line)
+	}
+	return wrapped
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -199,7 +211,8 @@ func (m *model) updateViewport() {
 	for _, log := range m.logs {
 		if m.filterText == "" || strings.Contains(strings.ToLower(log), strings.ToLower(m.filterText)) {
 			highlightedLog := highlightText(log, m.filterText)
-			filteredLogs = append(filteredLogs, highlightedLog)
+			wrappedLines := wrapLine(highlightedLog, m.viewport.Width)
+			filteredLogs = append(filteredLogs, wrappedLines...)
 		}
 	}
 	m.viewport.SetContent(strings.Join(filteredLogs, "\n"))
