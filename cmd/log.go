@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -153,7 +154,8 @@ func waitForLogs(logChan chan string) tea.Cmd {
 }
 
 func watchAndroidLogs() {
-	execCmd := exec.Command("adb", "logcat")
+	now := time.Now().Format("01-02 15:04:05.000")
+	execCmd := exec.Command("adb", "logcat", "-T", now)
 	stdout, err := execCmd.StdoutPipe()
 	if err != nil {
 		fmt.Println("Error creating StdoutPipe", err)
