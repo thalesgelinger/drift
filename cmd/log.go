@@ -90,9 +90,15 @@ func highlightText(text, substr string) string {
 	if substr == "" {
 		return text
 	}
-	highlightStart := "\033[1;33m" // Bold yellow
-	highlightEnd := "\033[0m"
-	return strings.Replace(text, substr, highlightStart+substr+highlightEnd, -1)
+	highlightStyle := lipgloss.NewStyle().
+		Background(lipgloss.Color("205")).
+		Foreground(lipgloss.Color("0"))
+
+	return strings.ReplaceAll(
+		text,
+		substr,
+		highlightStyle.Render(substr),
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
